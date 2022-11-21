@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+-->
+<ef:call-service xmlns:ef="http://www.enginframe.com/2000/EnginFrame"
+    sdf="${EF_ROOT}/plugins/dcvasg/lib/xml/dcvasg.triggers.xml"
+    uri="//dcvasg.triggers/cloudwatch-metrics"
+    user="${EF_ADMIN}">
+  <ef:trigger id="dcvasg-cloudwatch-metrics" type="simple" group="dcvasg">
+    <ef:repeat-forever/>
+    <ef:repeat-interval unit="SECONDS">60</ef:repeat-interval>
+  </ef:trigger>
+</ef:call-service>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+-->
+<ef:agent id="dcvasg.triggers"
+          authority="${EF_DEFAULT_AUTHORITY}"
+          xmlns:ef="http://www.enginframe.com/2000/EnginFrame">
+
+  <ef:name>dcvasg.triggers</ef:name>
+
+  <!--
+  <ef:location host="${EF_AGENT_HOST}" port="${EF_AGENT_PORT}"/>
+  -->
+
+  <ef:spooler server="${EF_SPOOLER_DIR}" ttl="-1"/>
+
+  <ef:folder id="root">
+    <ef:name>dcvasg.triggers</ef:name>
+
+    <ef:apply-acl select="admin-only" selectorType="simple" priority="allow">
+      <ef:spooler server="${EF_SPOOLER_DIR}" ttl="0">
+        <ef:service id="cloudwatch-metrics" hidden="true">
+          <ef:name>cloudwatch-metrics</ef:name>
+          <ef:action id="submit" output-mode="rest" result="text/plain">
+<![CDATA[
+if [[ ${EF_SCHEDULED_REQUEST} != true ]]; then
+    echo 'Access denied' >&2
+    exit 1
+fi
+'/opt/dcv/autoscaling/dcvasg.py' \
+    --dcv-cluster dcv-cluster --log-file "${EF_LOGDIR}/dcvasg.log"
+]]>
+          </ef:action>
+        </ef:service>
+      </ef:spooler>
+    </ef:apply-acl>
+
+  </ef:folder>
+
+</ef:agent>

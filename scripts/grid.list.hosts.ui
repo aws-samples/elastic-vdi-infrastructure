@@ -1,0 +1,112 @@
+#!/bin/sh
+
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+if [ "${EF_CURRENT_UI}" != "hydrogen" ]; then
+    exit
+fi
+
+_widget_id="ef-list-hosts"
+
+cat << EOF
+
+<ef:ui-configure-widget ui="${EF_CURRENT_UI}" id="${_widget_id}" xmlns:hy="http://www.enginframe.com/2009/UI/Hydrogen" xmlns:efactions="http://www.enginframe.com/2009/efactions" >
+
+  <hy:add-column id="dcv-fleet" position="1">
+    <hy:label>DCV Fleet</hy:label>
+    <hy:xmlmap>dcv-fleet</hy:xmlmap>
+    <hy:sortable>true</hy:sortable>
+    <hy:width>10</hy:width>
+    <hy:ellipsize>false</hy:ellipsize>
+  </hy:add-column>
+
+  <hy:add-column id="current-virtual-sessions" position="3">
+    <hy:label>DCV Sessions</hy:label>
+    <hy:xmlmap>current-virtual-sessions</hy:xmlmap>
+    <hy:sortable>true</hy:sortable>
+    <hy:width>6</hy:width>
+    <hy:ellipsize>false</hy:ellipsize>
+    <hy:custom-formatter>jQuery.hydrogen.ratioFormatter</hy:custom-formatter>
+    <hy:formatoptions>{maxValue: 'max-virtual-sessions', used: true}</hy:formatoptions>
+  </hy:add-column>
+
+  <hy:add-column id="instance-type" position="4">
+    <hy:label>Instance Type</hy:label>
+    <hy:xmlmap>instance-type</hy:xmlmap>
+    <hy:sortable>true</hy:sortable>
+    <hy:width>6</hy:width>
+    <hy:ellipsize>false</hy:ellipsize>
+  </hy:add-column>
+
+  <hy:add-column id="availability-zone" position="5">
+    <hy:label>Avail. Zone</hy:label>
+    <hy:xmlmap>availability-zone</hy:xmlmap>
+    <hy:sortable>true</hy:sortable>
+    <hy:width>6</hy:width>
+    <hy:ellipsize>false</hy:ellipsize>
+  </hy:add-column>
+
+  <hy:add-column id="instance-id" position="6">
+    <hy:label>Instance ID</hy:label>
+    <hy:xmlmap>instance-id</hy:xmlmap>
+    <hy:sortable>true</hy:sortable>
+    <hy:width>10</hy:width>
+    <hy:ellipsize>false</hy:ellipsize>
+  </hy:add-column>
+
+  <hy:add-chart id="status">
+    <hy:label>State</hy:label>
+  </hy:add-chart>
+
+  <hy:delete-column id="jobs" />
+
+  <hy:delete-filter id="all"/>
+  <hy:delete-filter id="idle"/>
+  <hy:delete-filter id="working"/>
+  <hy:delete-filter id="busy"/>
+  <hy:delete-filter id="offline"/>
+
+  <hy:add-filter id="online">
+    <hy:label>Online</hy:label>
+    <hy:formula>status != 'unavailable' and status != 'closed'</hy:formula>
+  </hy:add-filter>
+
+  <hy:add-filter id="offline">
+    <hy:label>Offline</hy:label>
+    <hy:formula>status = 'unavailable' or status = 'closed'</hy:formula>
+  </hy:add-filter>
+
+  <hy:add-filter id="idle">
+    <hy:label>Idle</hy:label>
+    <hy:formula>status = 'ok' and current-virtual-sessions = 0 and current-console-sessions = 0</hy:formula>
+  </hy:add-filter>
+
+  <hy:add-filter id="working">
+    <hy:label>Working</hy:label>
+    <hy:formula>status = 'ok' and current-virtual-sessions &gt; 0</hy:formula>
+  </hy:add-filter>
+
+  <hy:add-filter id="busy">
+    <hy:label>Busy</hy:label>
+    <hy:formula>status = 'busy'</hy:formula>
+  </hy:add-filter>
+
+  <hy:add-filter id="closed">
+    <hy:label>Closed</hy:label>
+    <hy:formula>status = 'closed'</hy:formula>
+  </hy:add-filter>
+
+  <hy:add-filter id="unavailable">
+    <hy:label>Unavailable</hy:label>
+    <hy:formula>status = 'unavailable'</hy:formula>
+  </hy:add-filter>
+
+  <hy:add-filter id="all">
+    <hy:label>All</hy:label>
+    <hy:formula></hy:formula>
+  </hy:add-filter>
+
+</ef:ui-configure-widget>
+
+EOF

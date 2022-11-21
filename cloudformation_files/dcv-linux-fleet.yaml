@@ -1,0 +1,406 @@
+%YAML 1.1
+
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+---
+
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: dcv-fleet
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: DCV Fleet Parameters
+        Parameters:
+          - DcvCluster
+          - DcvFleet
+          - Enabled
+          - InstanceType
+          - RootVolumeSize
+          - ScalingPolicy
+          - MinSize
+          - MaxSize
+          - MaxVirtualSessionsPerServer
+          - BillingTagName
+          - BillingTagValue
+
+Parameters:
+  DcvCluster:
+    Type: String
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9-]+$
+    Default: dcv-cluster
+    AllowedValues:
+     - dcv-cluster
+  DcvFleet:
+    Type: String
+    Description: "Please don't use spaces"
+    Default: linux_instances
+  Enabled:
+    Type: String
+    AllowedValues: [true]
+    Default: true
+  InstanceType:
+    Type: String
+    Default: g4dn.xlarge
+  RootVolumeSize:
+    Type: Number
+    Default: 35
+    MinValue: 35
+  ScalingPolicy:
+    Type: String
+    Default: StepScaling
+    AllowedValues:
+      - StepScaling
+  MinSize:
+    Type: Number
+    MinValue: 1
+  MaxSize:
+    Type: Number
+  MaxVirtualSessionsPerServer:
+    Type: Number
+    Default: 1
+    AllowedValues: [1]
+  BillingTagName:
+    Type: String
+  BillingTagValue:
+    Type: String
+
+
+Conditions:
+  Enabled: !Equals [true, !Ref Enabled]
+  SimpleScaling: !And
+    - !Condition Enabled
+    - !Equals [SimpleScaling, !Ref ScalingPolicy]
+  StepScaling: !And
+    - !Condition Enabled
+    - !Equals [StepScaling, !Ref ScalingPolicy]
+  Step01: !Or [!Condition Step02, !Equals [1, !Ref MinSize]]
+  Step02: !Or [!Condition Step03, !Equals [2, !Ref MinSize]]
+  Step03: !Or [!Condition Step04, !Equals [3, !Ref MinSize]]
+  Step04: !Or [!Condition Step05, !Equals [4, !Ref MinSize]]
+  Step05: !Or [!Condition Step06, !Equals [5, !Ref MinSize]]
+  Step06: !Or [!Condition Step07, !Equals [6, !Ref MinSize]]
+  Step07: !Or [!Condition Step08, !Equals [7, !Ref MinSize]]
+  Step08: !Or [!Condition Step09, !Equals [8, !Ref MinSize]]
+  Step09: !Or [!Condition Step10, !Equals [9, !Ref MinSize]]
+  Step10: !And
+    - !Not [!Equals [1, !Ref MinSize]]
+    - !Not [!Equals [2, !Ref MinSize]]
+    - !Not [!Equals [3, !Ref MinSize]]
+    - !Not [!Equals [4, !Ref MinSize]]
+    - !Not [!Equals [5, !Ref MinSize]]
+    - !Not [!Equals [6, !Ref MinSize]]
+    - !Not [!Equals [7, !Ref MinSize]]
+    - !Not [!Equals [8, !Ref MinSize]]
+    - !Not [!Equals [9, !Ref MinSize]]
+
+Resources:
+
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        BlockDeviceMappings:
+          - DeviceName: /dev/sda1
+            Ebs:
+              VolumeSize: !Ref RootVolumeSize
+              VolumeType: gp3
+              DeleteOnTermination: true
+              Encrypted: true
+        IamInstanceProfile:
+          Arn: '{{resolve:ssm:/dcv/Role}}'
+        ImageId: '{{resolve:ssm:/dcv/linux/AmiIdVdi}}'
+        InstanceType: !Ref InstanceType
+        Monitoring:
+          Enabled: true
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            Groups:
+              - '{{resolve:ssm:/dcv/Sg}}'
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub '${DcvCluster}-DcvServer'
+              - Key: dcv:cluster
+                Value: !Ref DcvCluster
+              - Key: dcv:fleet
+                Value: !Ref DcvFleet
+              - Key: dcv:max-virtual-sessions
+                Value: !Ref MaxVirtualSessionsPerServer
+              - Key: !Ref BillingTagName
+                Value: !Ref BillingTagValue
+          - ResourceType: volume
+            Tags:
+              - Key: Name
+                Value: !Sub '${DcvCluster}-DcvServer'
+              - Key: dcv:cluster
+                Value: !Ref DcvCluster
+              - Key: dcv:fleet
+                Value: !Ref DcvFleet
+              - Key: !Ref BillingTagName
+                Value: !Ref BillingTagValue
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            
+            #Configure default region for the AWS cli
+            aws configure set region ${AWS::Region}
+            
+            sleep 30
+            
+            # Retrieve the required parameters
+            export StackName=${AWS::StackName}
+            export RegionName=${AWS::Region}
+            export DcvFleet=${DcvFleet}
+            export InstanceType=${InstanceType}
+
+            LinuxUserdata=$(aws ssm get-parameter --name "/dcv/linux/Userdata" --output text --query Parameter.Value)
+
+            while [ ! -f /tmp/linux.sh ]
+            do
+              sleep 2
+              aws s3 cp $LinuxUserdata /tmp/linux.sh
+            done
+            
+            chmod +x /tmp/linux.sh
+            
+            bash /tmp/linux.sh
+            
+            rm -f /tmp/linux.sh
+            
+
+
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: Name
+              Value: !Sub '${DcvCluster}-DcvFleet'
+            - Key: dcv:cluster
+              Value: !Ref DcvCluster
+            - Key: dcv:fleet
+              Value: !Ref DcvFleet
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref MinSize
+        Timeout: PT30M
+    Properties:
+      DesiredCapacity: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      MinSize: !Ref MinSize
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MetricsCollection:
+        - Granularity: 1Minute
+      VPCZoneIdentifier: 
+        - '{{resolve:ssm:/dcv/VdiSubnetId}}'
+      Tags:
+        - PropagateAtLaunch: false
+          Key: Name
+          Value: !Sub '${DcvCluster}-DcvFleet'
+        - PropagateAtLaunch: false
+          Key: dcv:cluster
+          Value: !Ref DcvCluster
+        - PropagateAtLaunch: false
+          Key: dcv:fleet
+          Value: !Ref DcvFleet
+        - PropagateAtLaunch: false
+          Key: dcv:type
+          Value: dcvserver
+          
+  StepScalingScaleOutPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Condition: StepScaling
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      EstimatedInstanceWarmup: 300
+      MetricAggregationType: Average
+      PolicyType: StepScaling
+      StepAdjustments:
+        - !If
+          - Step01
+          - MetricIntervalUpperBound: -1
+            MetricIntervalLowerBound: !If [Step02, -2, !Ref 'AWS::NoValue']
+            ScalingAdjustment: 1
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Step02
+          - MetricIntervalUpperBound: -2
+            MetricIntervalLowerBound: !If [Step03, -3, !Ref 'AWS::NoValue']
+            ScalingAdjustment: 2
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Step03
+          - MetricIntervalUpperBound: -3
+            MetricIntervalLowerBound: !If [Step04, -4, !Ref 'AWS::NoValue']
+            ScalingAdjustment: 3
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Step04
+          - MetricIntervalUpperBound: -4
+            MetricIntervalLowerBound: !If [Step05, -5, !Ref 'AWS::NoValue']
+            ScalingAdjustment: 4
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Step05
+          - MetricIntervalUpperBound: -5
+            MetricIntervalLowerBound: !If [Step06, -6, !Ref 'AWS::NoValue']
+            ScalingAdjustment: 5
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Step06
+          - MetricIntervalUpperBound: -6
+            MetricIntervalLowerBound: !If [Step07, -7, !Ref 'AWS::NoValue']
+            ScalingAdjustment: 6
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Step07
+          - MetricIntervalUpperBound: -7
+            MetricIntervalLowerBound: !If [Step08, -8, !Ref 'AWS::NoValue']
+            ScalingAdjustment: 7
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Step08
+          - MetricIntervalUpperBound: -8
+            MetricIntervalLowerBound: !If [Step09, -9, !Ref 'AWS::NoValue']
+            ScalingAdjustment: 8
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Step09
+          - MetricIntervalUpperBound: -9
+            MetricIntervalLowerBound: !If [Step10, -10, !Ref 'AWS::NoValue']
+            ScalingAdjustment: 9
+          - !Ref 'AWS::NoValue'
+        - !If
+          - Step10
+          - MetricIntervalUpperBound: -10
+            MetricIntervalLowerBound: !Ref 'AWS::NoValue'
+            ScalingAdjustment: 10
+          - !Ref 'AWS::NoValue'
+
+  StepScalingScaleInPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Condition: StepScaling
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      EstimatedInstanceWarmup: 60
+      MetricAggregationType: Average
+      PolicyType: StepScaling
+      StepAdjustments:
+        - MetricIntervalLowerBound: 1
+          MetricIntervalUpperBound: 2
+          ScalingAdjustment: -1
+        - MetricIntervalLowerBound: 2
+          MetricIntervalUpperBound: 3
+          ScalingAdjustment: -2
+        - MetricIntervalLowerBound: 3
+          MetricIntervalUpperBound: 4
+          ScalingAdjustment: -3
+        - MetricIntervalLowerBound: 4
+          MetricIntervalUpperBound: 5
+          ScalingAdjustment: -4
+        - MetricIntervalLowerBound: 5
+          MetricIntervalUpperBound: 6
+          ScalingAdjustment: -5
+        - MetricIntervalLowerBound: 6
+          MetricIntervalUpperBound: 7
+          ScalingAdjustment: -6
+        - MetricIntervalLowerBound: 7
+          MetricIntervalUpperBound: 8
+          ScalingAdjustment: -7
+        - MetricIntervalLowerBound: 8
+          MetricIntervalUpperBound: 9
+          ScalingAdjustment: -8
+        - MetricIntervalLowerBound: 9
+          MetricIntervalUpperBound: 10
+          ScalingAdjustment: -9
+        - MetricIntervalLowerBound: 10
+          MetricIntervalUpperBound: !Ref 'AWS::NoValue'
+          ScalingAdjustment: -10
+
+  SimpleScalingScaleOutPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Condition: SimpleScaling
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      Cooldown: '1800'
+      PolicyType: SimpleScaling
+      ScalingAdjustment: 1
+
+  SimpleScalingScaleInPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Condition: SimpleScaling
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      Cooldown: '60'
+      PolicyType: SimpleScaling
+      ScalingAdjustment: -1
+
+  ScaleOutAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: Enabled
+    Properties:
+      ActionsEnabled: !Ref Enabled
+      AlarmActions:
+        - !If [SimpleScaling, !Ref SimpleScalingScaleOutPolicy, !Ref StepScalingScaleOutPolicy]
+      AlarmDescription: !Sub 'scale-out strategy for dcv fleet ${AutoScalingGroup}'
+      AlarmName: !Sub '${DcvCluster}-${DcvFleet}-ScaleOut'
+      ComparisonOperator: LessThanThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: DCV Cluster
+          Value: !Ref DcvCluster
+        - Name: Fleet Name
+          Value: !Ref AutoScalingGroup
+      EvaluationPeriods: 1
+      MetricName: idle_servers
+      Namespace: DCV AutoScaling
+      Period: 60
+      Statistic: Average
+      Threshold: !If [Enabled, !Ref MinSize, 0]
+      TreatMissingData: missing
+      Unit: Count
+
+  ScaleInAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: Enabled
+    Properties:
+      ActionsEnabled: !Ref Enabled
+      AlarmActions:
+        - !If [SimpleScaling, !Ref SimpleScalingScaleInPolicy, !Ref StepScalingScaleInPolicy]
+      AlarmDescription: !Sub 'scale-in strategy for dcv fleet ${AutoScalingGroup}'
+      AlarmName: !Sub '${DcvCluster}-${DcvFleet}-ScaleIn'
+      ComparisonOperator: GreaterThanThreshold
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: DCV Cluster
+          Value: !Ref DcvCluster
+        - Name: Fleet Name
+          Value: !Ref AutoScalingGroup
+      EvaluationPeriods: 1
+      MetricName: idle_servers
+      Namespace: DCV AutoScaling
+      Period: 60
+      Statistic: Average
+      Threshold: !If [Enabled, !Ref MinSize, 0]
+      TreatMissingData: missing
+      Unit: Count
+
+Outputs:
+  LaunchTemplateId:
+    Value: !Ref LaunchTemplate
+  AutoScalingGroup:
+    Value: !Ref AutoScalingGroup
+
+...
