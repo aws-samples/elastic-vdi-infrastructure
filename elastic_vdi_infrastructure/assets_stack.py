@@ -1,8 +1,6 @@
 # Copyright (C) 2022 by Amazon.com, Inc. or its affiliates.  All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-import aws_cdk as cdk
-
 from aws_cdk import (
     Stack,
     aws_s3_assets as assets,
@@ -10,11 +8,13 @@ from aws_cdk import (
 from constructs import Construct
 
 # Class used to build the VPC and Subnets
+
+
 class AssetsStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        
+
         # Copy the required files to S3
         self.closing_hook = assets.Asset(
             self, "ClosingHook", path='scripts/alb.session.closing.hook.sh')
@@ -27,7 +27,7 @@ class AssetsStack(Stack):
         self.swagger_client = assets.Asset(
             self, "SwaggerClient", path='scripts/swagger_client.zip')
         self.dcvasg_cloudwatch_metrics = assets.Asset(
-            self, "DcvasgCloudwatchMetrics", path='scripts/dcvasg-cloudwatch-metrics.xml')        
+            self, "DcvasgCloudwatchMetrics", path='scripts/dcvasg-cloudwatch-metrics.xml')
         self.dcvasg_triggers = assets.Asset(
             self, "DcvasgTriggers", path='scripts/dcvasg.triggers.xml')
         self.dcvasg = assets.Asset(
