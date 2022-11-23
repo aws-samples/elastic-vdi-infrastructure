@@ -14,7 +14,7 @@ export broker_installer={broker_installer}
 while [ ! -f /tmp/broker.sh ]
 do
   sleep 2
-  aws s3 cp $broker_userdata /tmp/broker.sh
+  aws s3 cp "$broker_userdata" /tmp/broker.sh
 done
 
 chmod +x /tmp/broker.sh

@@ -18,24 +18,24 @@ fsx_dns=$(aws ssm get-parameter --name "/dcv/SharedStorageDNS" --output text --q
 
 # Mount shared storages
 
-mkdir -p ${Shared_Storage_Linux}
+mkdir -p "${Shared_Storage_Linux}"
 
 # Mount shared file system
 echo "${fsx_dns}:/fsx/ ${Shared_Storage_Linux} nfs defaults 0 0" >> /etc/fstab
 
-mount ${Shared_Storage_Linux}
+mount "${Shared_Storage_Linux}"
 
 
 #Crate the EnginFrame administrator user
 efadmin_uid=$(aws ssm get-parameter --name "/dcv/linux/EfadminUID" --output text --query Parameter.Value)
-adduser -u ${efadmin_uid} efadmin
+adduser -u "${efadmin_uid}" efadmin
 
 #Retrieve the efadmin password from secret manager
 arn_secret_password=$(aws ssm get-parameter --name "/dcv/linux/Efadmin" --output text --query Parameter.Value)
-efadmin_password=$(aws secretsmanager get-secret-value --secret-id ${arn_secret_password} --query SecretString --output text)
+efadmin_password=$(aws secretsmanager get-secret-value --secret-id "${arn_secret_password}" --query SecretString --output text)
 
 #Configure the password for the efadmin user
-printf "$efadmin_password" | passwd efadmin --stdin
+printf "%s" "$efadmin_password" | passwd efadmin --stdin
 
 
 #Retrieve from parameter store the DCVSM broker certificate
@@ -66,7 +66,7 @@ sed -i "/^\[agent\]/a tls_strict = false" /etc/dcv-session-manager-agent/agent.c
 #Create the tags
 mkdir /etc/dcv-session-manager-agent/tags/
 instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-asg_name=$(aws ec2 describe-instances --instance-ids $instance_id --query "Reservations[].Instances[].Tags[?Key=='aws:autoscaling:groupName'].Value" --output text)
+asg_name=$(aws ec2 describe-instances --instance-ids "$instance_id" --query "Reservations[].Instances[].Tags[?Key=='aws:autoscaling:groupName'].Value" --output text)
 echo "AutoScalingGroupName=\"$asg_name\"" >> /etc/dcv-session-manager-agent/tags/agent_tags.toml
 echo "InstanceType=\"$InstanceType\"" >> /etc/dcv-session-manager-agent/tags/agent_tags.toml
 echo "DCVFleet=\"$DcvFleet\"" >> /etc/dcv-session-manager-agent/tags/agent_tags.toml
@@ -101,13 +101,13 @@ sed -i '/Section "Device"/a Option         "HardDPMS" "false"' /etc/X11/xorg.con
 MyInstID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
 #Retrieve the logical ID of the resource
-ASGLOGICALID=$(aws ec2 describe-instances --instance-ids $MyInstID --query "Reservations[].Instances[].Tags[?Key=='aws:cloudformation:logical-id'].Value" --output text)
+ASGLOGICALID=$(aws ec2 describe-instances --instance-ids "$MyInstID" --query "Reservations[].Instances[].Tags[?Key=='aws:cloudformation:logical-id'].Value" --output text)
 
 # Retrieve NICE_ROOT path
 NICE_ROOT="${Shared_Storage_Linux}/nice"
 
 # Configure access to instance metadata
-$NICE_ROOT/scripts/imds-access.sh --allow root,dcvsmagent,dcv
+"$NICE_ROOT"/scripts/imds-access.sh --allow root,dcvsmagent,dcv
 
 #Start DCV
 #systemctl restart dcvserver
@@ -176,14 +176,14 @@ else
 fi
 
 if [[ ! -z $DEVICES ]]; then
-	echo "Detected Instance Store with NVME:" $DEVICES
+	echo "Detected Instance Store with NVME:" "$DEVICES"
 	# Clear Devices which are already mounted (eg: when customer import their own AMI)
 	for device in $DEVICES;
 	do
-		CHECK_IF_PARTITION_EXIST=$(lsblk -b $device | grep part | wc -l)
+		CHECK_IF_PARTITION_EXIST=$(lsblk -b "$device" | grep part | wc -l)
 		if [[ $CHECK_IF_PARTITION_EXIST -eq 0 ]]; then
 			echo "$device is free and can be used"
-			VOLUME_LIST+=($device)
+			VOLUME_LIST+=("$device")
 		fi
 	done
 
@@ -191,15 +191,15 @@ if [[ ! -z $DEVICES ]]; then
 	if [[ $VOLUME_COUNT -eq 1 ]]; then
 		# If only 1 instance store, mfks as ext4
 		echo "Detected  1 NVMe device available, formatting as ext4 .."
-		mkfs -t ext4 $VOLUME_LIST
+		mkfs -t ext4 "$VOLUME_LIST"
 		echo "$VOLUME_LIST /scratch ext4 defaults,nofail 0 0" >> /etc/fstab
 	elif [[ $VOLUME_COUNT -gt 1 ]]; then
 		# if more than 1 instance store disks, raid them !
 		echo "Detected more than 1 NVMe device available, creating XFS fs ..."
 		DEVICE_NAME="md0"
-	  for dev in ${VOLUME_LIST[@]} ; do dd if=/dev/zero of=$dev bs=1M count=1 ; done
-	  echo yes | mdadm --create -f --verbose --level=0 --raid-devices=$VOLUME_COUNT /dev/$DEVICE_NAME ${VOLUME_LIST[@]}
-	  mkfs -t ext4 /dev/$DEVICE_NAME
+	  for dev in "${VOLUME_LIST[@]}" ; do dd if=/dev/zero of="$dev" bs=1M count=1 ; done
+	  echo yes | mdadm --create -f --verbose --level=0 --raid-devices="$VOLUME_COUNT" /dev/"$DEVICE_NAME" "${VOLUME_LIST[@]}"
+	  mkfs -t ext4 /dev/"$DEVICE_NAME"
 	  mdadm --detail --scan | tee -a /etc/mdadm.conf
 	  echo "/dev/$DEVICE_NAME /scratch ext4 defaults,nofail 0 0" >> /etc/fstab
 	else

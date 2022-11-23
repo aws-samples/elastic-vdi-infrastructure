@@ -24,7 +24,7 @@ export account={account}
 export efadmin_uid={efadmin_uid}
 export enginframe_node_configuration={enginframe_node_configuration}
 export Shared_Storage_Linux={Shared_Storage_Linux}
-export NICE_ROOT=$Shared_Storage_Linux/nice
+export NICE_ROOT="$Shared_Storage_Linux"/nice
 export imds_access_script={imds_access_script}
 export ef_installer={ef_installer}
 export fsx_dns={fsx_dns}
@@ -34,7 +34,7 @@ sleep 30
 while [ ! -f /tmp/enginframe.sh ]
 do
   sleep 2
-  aws s3 cp $enginframe_node_configuration /tmp/enginframe.sh
+  aws s3 cp "$enginframe_node_configuration" /tmp/enginframe.sh
 done
 
 

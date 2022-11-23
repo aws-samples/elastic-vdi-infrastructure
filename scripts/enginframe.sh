@@ -7,7 +7,7 @@
 #exec 2>"/tmp/debug.log.$$";set -x
 
 #Configure default region for the AWS cli
-aws configure set region ${RegionName} 
+aws configure set region "${RegionName}"
 
 
 arn_secret_password=$(aws ssm get-parameter --name "/dcv/linux/Efadmin" --output text --query Parameter.Value)
@@ -20,12 +20,12 @@ systemctl disable firewalld
 yum -y install java-1.8.0-openjdk.x86_64 curl wget python2-pip nfs-utils
 pip3 install boto3 certifi
 
-mkdir -p ${Shared_Storage_Linux}
+mkdir -p "${Shared_Storage_Linux}"
 
 # Mount shared file system
 echo "${fsx_dns}:/fsx/ ${Shared_Storage_Linux} nfs defaults 0 0" >> /etc/fstab
 
-mount ${Shared_Storage_Linux}
+mount "${Shared_Storage_Linux}"
 
 first_install="no"
 
@@ -37,15 +37,15 @@ fi
 
 
 #Crate the EnginFrame administrator user
-adduser -u ${efadmin_uid} efadmin
+adduser -u "${efadmin_uid}" efadmin
 
 #Create the EnginFrame service user
-efnobody_uid=$(( $efadmin_uid + 1 ))
-adduser -u $efnobody_uid efnobody
+efnobody_uid=$(( "$efadmin_uid" + 1 ))
+adduser -u "$efnobody_uid" efnobody
 
 
 #Retrieve the efadmin password from secret manager
-efadmin_password=$(aws secretsmanager get-secret-value --secret-id ${arn_secret_password} --query "SecretString" --output text)
+efadmin_password=$(aws secretsmanager get-secret-value --secret-id "${arn_secret_password}" --query "SecretString" --output text)
 
 #Configure the password for the efadmin user
 printf "$efadmin_password" | passwd efadmin --stdin
@@ -55,7 +55,7 @@ printf "$efadmin_password" | passwd efadmin --stdin
 if [ "${first_install}" == "yes" ]; then
 
 	#EnginFrame Download URL
-	wget ${ef_installer}
+	wget "${ef_installer}"
 
 	ef_jar=$(ls *.jar)
 
@@ -112,7 +112,7 @@ EOF
 	#Install EnginFrame
 	java -jar "$ef_jar" --text --batch
 	
-	mkdir $NICE_ROOT/log
+	mkdir "$NICE_ROOT"/log
 
 	client_pw="dummy"
 
@@ -127,86 +127,86 @@ EOF
 
 	#Configure the EnginFrame variables required to communicate with DCVSM
 	sed -i "s/^DCVSM_CLUSTER_dcvsm_cluster1_AUTH_ID=.*$/DCVSM_CLUSTER_dcvsm_cluster1_AUTH_ID=$client_id/" \
-			$NICE_ROOT/enginframe/conf/plugins/dcvsm/clusters.props
+			"$NICE_ROOT"/enginframe/conf/plugins/dcvsm/clusters.props
 	sed -i "s/^DCVSM_CLUSTER_dcvsm_cluster1_AUTH_PASSWORD=.*$/DCVSM_CLUSTER_dcvsm_cluster1_AUTH_PASSWORD=$client_pw/" \
-			$NICE_ROOT/enginframe/conf/plugins/dcvsm/clusters.props
+			"$NICE_ROOT"/enginframe/conf/plugins/dcvsm/clusters.props
 	sed -i "s/^DCVSM_CLUSTER_dcvsm_cluster1_AUTH_ENDPOINT=.*$/DCVSM_CLUSTER_dcvsm_cluster1_AUTH_ENDPOINT=https:\/\/$broker_alb:8443\/oauth2\/token/" \
-			$NICE_ROOT/enginframe/conf/plugins/dcvsm/clusters.props
+			"$NICE_ROOT"/enginframe/conf/plugins/dcvsm/clusters.props
 	sed -i "s/^DCVSM_CLUSTER_dcvsm_cluster1_SESSION_MANAGER_ENDPOINT=.*$/DCVSM_CLUSTER_dcvsm_cluster1_SESSION_MANAGER_ENDPOINT=https:\/\/$broker_alb:8443/" \
-			$NICE_ROOT/enginframe/conf/plugins/dcvsm/clusters.props
+			"$NICE_ROOT"/enginframe/conf/plugins/dcvsm/clusters.props
 			
 	#Remove lsf from grid.conf
-	sed -i "s/lsf/dcvsm/" $NICE_ROOT/enginframe/conf/plugins/grid/grid.conf
+	sed -i "s/lsf/dcvsm/" "$NICE_ROOT"/enginframe/conf/plugins/grid/grid.conf
 	
 
 	source "$NICE_ROOT/enginframe/conf/enginframe.conf"
 
 
 			
-	EF_VERSION=$(cat $NICE_ROOT/enginframe/current-version | awk -F'=' '{{print $2}}')
+	EF_VERSION=$(cat "$NICE_ROOT"/enginframe/current-version | awk -F'=' '{{print $2}}')
 
 	#Create the EnginFrame hook required to add the ALB rules entries for the DCV sessions. 
-	aws s3 cp ${starting_hook} $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh
-	sed -i "s/@ALB_DNS_NAME@/${ALB_DNS_NAME}/" $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh
-	sed -i "s/@RegionName@/${RegionName}/" $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh
+	aws s3 cp "${starting_hook}" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh
+	sed -i "s/@ALB_DNS_NAME@/${ALB_DNS_NAME}/" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh
+	sed -i "s/@RegionName@/${RegionName}/" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh
 
 
 	#Create the EnginFrame hook required to remove the ALB rules entries for the DCV sessions.
-	aws s3 cp ${closing_hook} $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh
-	sed -i "s/@ALB_DNS_NAME@/${ALB_DNS_NAME}/" $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh
-	sed -i "s/@RegionName@/${RegionName}/" $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh
+	aws s3 cp "${closing_hook}" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh
+	sed -i "s/@ALB_DNS_NAME@/${ALB_DNS_NAME}/" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh
+	sed -i "s/@RegionName@/${RegionName}/" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh
 
 
-	chmod +x $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh
-	chmod +x $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh
+	chmod +x "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh
+	chmod +x "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh
 
 
 	#Configure the linux service EnginFrame
 	sed -i 's/<ef:metadata attribute="VDI_REMOTE">.*$/<ef:metadata attribute="VDI_REMOTE">dcv2sm<\/ef:metadata>\n<ef:metadata attribute="VDI_CLUSTER">dcvsm_cluster1:dcvsm<\/ef:metadata>/' \
-			$NICE_ROOT/enginframe/data/plugins/applications/services/catalog/interactive_builtin_linux_desktop/WEBAPP/service.xml
-	aws s3 cp ${interactive_builtin_linux_desktop}  $NICE_ROOT/enginframe/data/plugins/applications/services/published/interactive/interactive_builtin_linux_desktop.xml
-	rm -f  $NICE_ROOT/enginframe/data/plugins/applications/services/published/batch/*
-	sed -i 's|vdi.launch.session.*$|vdi.launch.session --name ${EF_USER}|' $NICE_ROOT/enginframe/data/plugins/applications/services/catalog/interactive/interactive_builtin_linux_desktop/bin/action-script.sh
+			"$NICE_ROOT"/enginframe/data/plugins/applications/services/catalog/interactive_builtin_linux_desktop/WEBAPP/service.xml
+	aws s3 cp ${interactive_builtin_linux_desktop}  "$NICE_ROOT"/enginframe/data/plugins/applications/services/published/interactive/interactive_builtin_linux_desktop.xml
+	rm -f  "$NICE_ROOT"/enginframe/data/plugins/applications/services/published/batch/*
+	sed -i 's|vdi.launch.session.*$|vdi.launch.session --name ${EF_USER}|' "$NICE_ROOT"/enginframe/data/plugins/applications/services/catalog/interactive/interactive_builtin_linux_desktop/bin/action-script.sh
 	
 	#Configure the windows service EnginFrame
 	sed -i 's/<ef:metadata attribute="VDI_REMOTE">.*$/<ef:metadata attribute="VDI_REMOTE">dcv2sm<\/ef:metadata>\n<ef:metadata attribute="VDI_CLUSTER">dcvsm_cluster1:dcvsm<\/ef:metadata>/' \
-			$NICE_ROOT/enginframe/data/plugins/applications/services/catalog/interactive_builtin_windows_desktop/WEBAPP/service.xml
-	aws s3 cp ${interactive_builtin_windows_desktop}  $NICE_ROOT/enginframe/data/plugins/applications/services/published/interactive/interactive_builtin_windows_desktop.xml
-	rm -f  $NICE_ROOT/enginframe/data/plugins/applications/services/published/batch/*
-	sed -i 's|vdi.launch.session.*$|vdi.launch.session --name ${EF_USER}|' $NICE_ROOT/enginframe/data/plugins/applications/services/catalog/interactive/interactive_builtin_windows_desktop/bin/action-script.sh
+			"$NICE_ROOT"/enginframe/data/plugins/applications/services/catalog/interactive_builtin_windows_desktop/WEBAPP/service.xml
+	aws s3 cp ${interactive_builtin_windows_desktop}  "$NICE_ROOT"/enginframe/data/plugins/applications/services/published/interactive/interactive_builtin_windows_desktop.xml
+	rm -f  "$NICE_ROOT"/enginframe/data/plugins/applications/services/published/batch/*
+	sed -i 's|vdi.launch.session.*$|vdi.launch.session --name ${EF_USER}|' "$NICE_ROOT"/enginframe/data/plugins/applications/services/catalog/interactive/interactive_builtin_windows_desktop/bin/action-script.sh
 
 	#Configure EnginFrame to use the hooks         
-	echo "INTERACTIVE_SESSION_STARTING_HOOK=$NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh" >> $NICE_ROOT/enginframe/conf/plugins/interactive/interactive.efconf
-	echo "INTERACTIVE_SESSION_CLOSING_HOOK=$NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh" >> $NICE_ROOT/enginframe/conf/plugins/interactive/interactive.efconf
+	echo "INTERACTIVE_SESSION_STARTING_HOOK=$NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.starting.hook.sh" >> "$NICE_ROOT"/enginframe/conf/plugins/interactive/interactive.efconf
+	echo "INTERACTIVE_SESSION_CLOSING_HOOK=$NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/interactive/bin/alb.session.closing.hook.sh" >> "$NICE_ROOT"/enginframe/conf/plugins/interactive/interactive.efconf
 
 	# Configure Enginframe to remove the @doman from username
 	cat <<'EOF' > $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/pam/bin/ef.user.mapping
 #!/bin/bash
 echo $1 | awk -F'@' '{print $1}'
 EOF
-	chmod 755 $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/pam/bin/ef.user.mapping
-	sed -i 's/^EFAUTH_USERMAPPING=.*$/EFAUTH_USERMAPPING="true"/' $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/pam/conf/ef.auth.conf
+	chmod 755 "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/pam/bin/ef.user.mapping
+	sed -i 's/^EFAUTH_USERMAPPING=.*$/EFAUTH_USERMAPPING="true"/' "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/pam/conf/ef.auth.conf
 
 
 	#Set max sessions to 1
-	echo "INTERACTIVE_DEFAULT_MAX_SESSIONS=1" >> $NICE_ROOT/enginframe/conf/plugins/interactive/interactive.efconf
+	echo "INTERACTIVE_DEFAULT_MAX_SESSIONS=1" >> "$NICE_ROOT"/enginframe/conf/plugins/interactive/interactive.efconf
 
 	#Default page VDI portal
-	sed -i "s|demo/index.html|applications/applications.xml|" $NICE_ROOT/enginframe/$EF_VERSION/enginframe/WEBAPP/index.html
+	sed -i "s|demo/index.html|applications/applications.xml|" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/WEBAPP/index.html
 	sed -i 's|<xsl:variable name="nj.welcome.service">.*$|<xsl:variable name="nj.welcome.service">_uri=//com.enginframe.interactive/list.sessions</xsl:variable>|' \
-			$NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/applications/lib/xsl/applications.xsl
+			"$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/applications/lib/xsl/applications.xsl
 
 	#Configure custom hosts list
-	rm -f $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/dcvsm/grid/grid.list.hosts.ui
-	aws s3 cp ${grid_list_hosts_ui} $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/dcvsm/grid/grid.list.hosts.ui
-	chmod +x $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/dcvsm/grid/grid.list.hosts.ui
+	rm -f "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/dcvsm/grid/grid.list.hosts.ui
+	aws s3 cp "${grid_list_hosts_ui}" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/dcvsm/grid/grid.list.hosts.ui
+	chmod +x "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/dcvsm/grid/grid.list.hosts.ui
 	
 	# Create scripts folder
-	mkdir $NICE_ROOT/scripts
+	mkdir "$NICE_ROOT"/scripts
 	
 	# Copy script used to configure iptables and deny access to instance metadata
-	aws s3 cp ${imds_access_script} $NICE_ROOT/scripts/imds-access.sh
-	chmod 700 $NICE_ROOT/scripts/imds-access.sh
+	aws s3 cp "${imds_access_script}" "$NICE_ROOT"/scripts/imds-access.sh
+	chmod 700 "$NICE_ROOT"/scripts/imds-access.sh
 
 
   # Add script used to remove the unused ALB rules
@@ -236,7 +236,7 @@ for listener in $listeners; do
 done
 EOF
 
-  chmod +x $NICE_ROOT/scripts/check_alb_rules.sh
+  chmod +x "$NICE_ROOT"/scripts/check_alb_rules.sh
 
 
 else
@@ -272,38 +272,38 @@ fi
 
 #Configure the VDI autoscaling
 mkdir -p /opt/dcv/autoscaling
-aws s3 cp ${aws_py} /opt/dcv/autoscaling/aws.py
+aws s3 cp "${aws_py}" /opt/dcv/autoscaling/aws.py
 chmod +x /opt/dcv/autoscaling/aws.py
-aws s3 cp ${swagger_client} /opt/dcv/autoscaling/swagger_client.zip
+aws s3 cp "${swagger_client}" /opt/dcv/autoscaling/swagger_client.zip
 unzip /opt/dcv/autoscaling/swagger_client.zip -d /opt/dcv/autoscaling/
 rm -f /opt/dcv/autoscaling/swagger_client.zip
-aws s3 cp ${dcvasg} /opt/dcv/autoscaling/dcvasg.py
+aws s3 cp "${dcvasg}" /opt/dcv/autoscaling/dcvasg.py
 chmod +x /opt/dcv/autoscaling/dcvasg.py
-aws s3 cp ${dcvsm} /opt/dcv/autoscaling/dcvsm.py
+aws s3 cp "${dcvsm}" /opt/dcv/autoscaling/dcvsm.py
 chmod +x /opt/dcv/autoscaling/dcvsm.py
 
 if [ "${first_install}" == "yes" ]; then
-	mkdir -p $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/dcvasg/lib/xml
-	aws s3 cp ${dcvasg_triggers} $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/dcvasg/lib/xml/dcvasg.triggers.xml
-	mkdir -p $NICE_ROOT/enginframe/$EF_VERSION/enginframe/triggers
-	aws s3 cp ${dcvasg_cloudwatch_metrics} $NICE_ROOT/enginframe/$EF_VERSION/enginframe/triggers/dcvasg-cloudwatch-metrics.xml
+	mkdir -p "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/dcvasg/lib/xml
+	aws s3 cp "${dcvasg_triggers}" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/dcvasg/lib/xml/dcvasg.triggers.xml
+	mkdir -p "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/triggers
+	aws s3 cp "${dcvasg_cloudwatch_metrics}" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/triggers/dcvasg-cloudwatch-metrics.xml
     
 	# Disable screenshot to avoid DCV issue
-	sed -i "s|return new com.nice.dcvsm.interactive.RetrieveScreenshot(enginframe).run()|//return new com.nice.dcvsm.interactive.RetrieveScreenshot(enginframe).run()|" $NICE_ROOT/enginframe/$EF_VERSION/enginframe/plugins/dcvsm/interactive/services/interactive.dcvsm.xml
+	sed -i "s|return new com.nice.dcvsm.interactive.RetrieveScreenshot(enginframe).run()|//return new com.nice.dcvsm.interactive.RetrieveScreenshot(enginframe).run()|" "$NICE_ROOT"/enginframe/"$EF_VERSION"/enginframe/plugins/dcvsm/interactive/services/interactive.dcvsm.xml
 
 
 	# Configure download of files
-	echo "ef.download.server.url=https://localhost:8443/enginframe/download" >>  $NICE_ROOT/enginframe/conf/enginframe/agent.conf
+	echo "ef.download.server.url=https://localhost:8443/enginframe/download" >>  "$NICE_ROOT"/enginframe/conf/enginframe/agent.conf
 	# Download the DCVSM certificate
 	dcvsm_certificate=$(aws ssm get-parameter --name "/dcv/linux/DcvBrokerCACertificate" --output text --query Parameter.Value)
-	echo "${dcvsm_certificate}" > $NICE_ROOT/dcvsmbroker_ca.pem
+	echo "${dcvsm_certificate}" > "$NICE_ROOT"/dcvsmbroker_ca.pem
 	
 
 	
 fi
 
 # add dcvsm certificate to Java keystore
-openssl x509 -in $NICE_ROOT/dcvsmbroker_ca.pem -inform pem \
+openssl x509 -in "$NICE_ROOT"/dcvsmbroker_ca.pem -inform pem \
 			-out /tmp/dcvsmbroker_ca.der -outform der
 keytool -importcert -alias dcvsm \
 				-keystore "$JAVA_HOME/lib/security/cacerts" \
@@ -312,7 +312,7 @@ keytool -importcert -alias dcvsm \
 				-file /tmp/dcvsmbroker_ca.der
 
 # Configure access to instance metadata
-$NICE_ROOT/scripts/imds-access.sh --allow root,efadmin,efnobody
+"$NICE_ROOT"/scripts/imds-access.sh --allow root,efadmin,efnobody
 
 
 #Start EnginFrame     
@@ -336,7 +336,7 @@ echo "0 8 * * * $NICE_ROOT/scripts/check_alb_rules.sh ${ALB_ARN} >> $NICE_ROOT/l
 MyInstID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
 #Retrieve the logical ID of the resource
-ASGLOGICALID=$(aws ec2 describe-instances --instance-ids $MyInstID --query "Reservations[].Instances[].Tags[?Key=='aws:cloudformation:logical-id'].Value" --output text)
+ASGLOGICALID=$(aws ec2 describe-instances --instance-ids "$MyInstID" --query "Reservations[].Instances[].Tags[?Key=='aws:cloudformation:logical-id'].Value" --output text)
 
 #Send the signal to the Cloudformation Stack
-/opt/aws/bin/cfn-signal -e $? --stack ${StackName} --resource $ASGLOGICALID --region ${RegionName}
+/opt/aws/bin/cfn-signal -e $? --stack "${StackName}" --resource "$ASGLOGICALID" --region "${RegionName}"

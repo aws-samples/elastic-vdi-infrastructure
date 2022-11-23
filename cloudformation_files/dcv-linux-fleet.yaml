@@ -163,7 +163,7 @@ Resources:
             while [ ! -f /tmp/linux.sh ]
             do
               sleep 2
-              aws s3 cp $LinuxUserdata /tmp/linux.sh
+              aws s3 cp "$LinuxUserdata" /tmp/linux.sh
             done
             
             chmod +x /tmp/linux.sh

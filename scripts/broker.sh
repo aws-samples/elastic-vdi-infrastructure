@@ -9,7 +9,7 @@ systemctl stop firewalld
 systemctl disable firewalld
 
 #Configure default region for the AWS cli
-aws configure set region ${RegionName}
+aws configure set region "${RegionName}"
 
 #Install some required packages
 yum -y install curl wget
@@ -44,7 +44,7 @@ systemctl enable dcv-session-manager-broker
 systemctl start dcv-session-manager-broker
 
 
-sleep $(shuf -i 60-120 -n 1)
+sleep "$(shuf -i 60-120 -n 1)"
 
 # Verify the client_id
 client_id_param=$(aws ssm get-parameter --name "/dcvbroker/ClientId" --output text --query Parameter.Value)
@@ -66,7 +66,7 @@ fi
 MyInstID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 
 #Retrieve the logical ID of the resource
-ASGLOGICALID=$(aws ec2 describe-instances --instance-ids $MyInstID --query "Reservations[].Instances[].Tags[?Key=='aws:cloudformation:logical-id'].Value" --output text)
+ASGLOGICALID=$(aws ec2 describe-instances --instance-ids "$MyInstID" --query "Reservations[].Instances[].Tags[?Key=='aws:cloudformation:logical-id'].Value" --output text)
 
 #Send the signal to the Cloudformation Stack
-/opt/aws/bin/cfn-signal -e $? --stack ${StackName} --resource $ASGLOGICALID --region ${RegionName}
+/opt/aws/bin/cfn-signal -e $? --stack "${StackName}" --resource "$ASGLOGICALID" --region "${RegionName}"
