@@ -5,6 +5,11 @@ that is accessible through a simple web-based user interface. The VDI solution s
 with an easily accessible and performant user interface to submit graphics-intensive analysis requests, and review results remotely.
 This eliminates the need for expensive dedicated workstations, or transferring large amounts of data from the cloud to client machines. 
 
+The figure below shows the different components of the VDI solution. 
+The architecture shows how a user interacts with EnginFrame to launch instances according to the Auto Scaling groups for Windows and Linux NICE DCV instances.
+ ![Architecture diagram](diagram.png)
+
+
 Install the CDK libraries enter the following:
 
 ```
@@ -49,6 +54,8 @@ When the deployment is competed, The following two outputs are returned:
 
  * `Elastic-Vdi-Infrastructure.EnginFrameURL`                 The https address of the EnginFrame portal
  * `Elastic-Vdi-Infrastructure.SecretEFadminPassword`         The arn of the secret that contains the password of the EnginFrame administrator user (efadmin)
+
+**Note**: a self signed certificate is generated for the HTTPS connection.
 
 
 To deploy the linux and windows DCV fleet, the following two CloudFormation templates can be user:
