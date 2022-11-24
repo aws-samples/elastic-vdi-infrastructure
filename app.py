@@ -26,8 +26,8 @@ CONFIG = {
     "efadmin_uid": "50000",
     "linux_shared_storage_size": 64,  # OpenZFS size in GiB
     "Shared_Storage_Linux": "/shared",  # Shared Linux storage
-    "Enginframe_installer": "https://dn3uclhgxk1jt.cloudfront.net/enginframe/packages/2021.0/1657/enginframe-2021.0-r1657.jar",
-    "Session_Manager_Broker_Installer": "https://d1uj6qtbmh3dt5.cloudfront.net/2022.1/SessionManagerBrokers/nice-dcv-session-manager-broker-2022.1.355-1.el7.noarch.rpm"
+    "Enginframe_installer": "https://dn3uclhgxk1jt.cloudfront.net/enginframe/packages/enginframe-latest.jar",
+    "Session_Manager_Broker_Installer": "https://d1uj6qtbmh3dt5.cloudfront.net/nice-dcv-session-manager-broker-el7.noarch.rpm"
 }
 
 
