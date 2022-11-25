@@ -32,6 +32,7 @@ from swagger_client.models.key_value_pair import KeyValuePair
 
 urllib3.disable_warnings()
 
+
 class DcvSM:
 
     def __init__(self, client_id, client_secret, broker_host, broker_port, ca_file):
@@ -219,7 +220,7 @@ def main():
     parser.add_argument('--log-level', type=str.upper, default='INFO',
                         choices=['ERROR', 'WARNING', 'INFO', 'DEBUG'])
     parser.add_argument('--log-file')
-    parser.add_argument('--log-max-bytes', type=int, default=10*1024*1024)
+    parser.add_argument('--log-max-bytes', type=int, default=10 * 1024 * 1024)
     parser.add_argument('--log-backup-count', type=int, default=5)
     args = parser.parse_args()
 

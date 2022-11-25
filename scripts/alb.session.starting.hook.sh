@@ -7,7 +7,7 @@ ALB_PUBLIC_DNS_NAME=@ALB_DNS_NAME@
 ALB_PORT=443
 export AWS_DEFAULT_REGION=@RegionName@
 _die() {
-    echo "ERROR: $@"
+    echo "ERROR"
     exit 1
 }
 _help() {
@@ -26,9 +26,10 @@ main() {
     local -- _session_id=$1
     local -- _alb_host=$2
     local -- _alb_port=$3
-    local -- _target_host=$(echo $6 | cut -c 2-)
+    local -- _target_host
     local -- _target_port=$5
     local -- _target_web_url_path=$6
+    _target_host=$(echo "$6" | cut -c 2-)
     [ -z "$_session_id" ] && _die "Missing input Session Id parameter."
     [ -z "$_alb_host" ] && _die "Missing input ALB Host parameter."
     [ -z "$_alb_port" ] && _die "Missing input ALB Port parameter."
