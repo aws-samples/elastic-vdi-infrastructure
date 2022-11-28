@@ -40,7 +40,7 @@ fi
 adduser -u "${efadmin_uid}" efadmin
 
 #Create the EnginFrame service user
-efnobody_uid=$(( "$efadmin_uid" + 1 ))
+efnobody_uid=$(( $efadmin_uid + 1 ))
 adduser -u "$efnobody_uid" efnobody
 
 
