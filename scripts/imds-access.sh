@@ -21,8 +21,7 @@ function info() {
 }
 
 function help() {
-  local -- cmd
-  cmd=$(basename "$0")
+  local -- cmd=$(basename "$0")
   cat <<EOF
 
   Usage: ${cmd} [OPTION]...
@@ -55,7 +54,7 @@ function iptables_delete() {
   # Remove rules
   local should_remove=true
   while $should_remove; do
-    eval "$iptables_delete_command" 1>/dev/null 2>/dev/null || should_remove=false
+    eval $iptables_delete_command 1>/dev/null 2>/dev/null || should_remove=false
   done
 }
 
@@ -66,13 +65,13 @@ function iptables_add() {
   local user=$4
 
   # Remove duplicate rules
-  iptables_delete "$chain" "$destination" "$jump" "$user"
+  iptables_delete $chain $destination $jump $user
 
   # Remove opposite rules
   if [[ $jump == "ACCEPT" ]]; then
-    iptables_delete "$destination" "REJECT" "$user"
+    iptables_delete $destination "REJECT" $user
   elif [[ $jump == "REJECT" ]]; then
-    iptables_delete "$destination" "ACCEPT" "$user"
+    iptables_delete $destination "ACCEPT" $user
   fi
 
   # Build iptables add command
@@ -85,7 +84,7 @@ function iptables_add() {
   local iptables_add_command="iptables -A $rule_args"
 
   # Add rule
-  eval "$iptables_add_command"
+  eval $iptables_add_command
   info "Rule in chain $chain: $destination $jump $user"
 }
 
@@ -94,10 +93,10 @@ function setup_chain() {
   local source_chain=$2
   local destination=$3
 
-  iptables --new "$chain" 2>/dev/null && info "ParallelCluster chain created: $chain" \
+  iptables --new $chain 2>/dev/null && info "ParallelCluster chain created: $chain" \
   || info "ParallelCluster chain exists: $chain"
 
-  iptables_add "$source_chain $destination" "$chain"
+  iptables_add $source_chain $destination $chain
 }
 
 main() {
@@ -128,11 +127,11 @@ main() {
   fi
 
   # Setup ParallelCluster chain
-  setup_chain "$PARALLELCLUSTER_CHAIN" "$OUTPUT_CHAIN" "$IMDS_IP"
+  setup_chain $PARALLELCLUSTER_CHAIN $OUTPUT_CHAIN $IMDS_IP
 
   # Flush ParallelCluster chain, if required
   if [[ $flush == "true" ]]; then
-    iptables --flush "$PARALLELCLUSTER_CHAIN"
+    iptables --flush $PARALLELCLUSTER_CHAIN
     info "ParallelCluster chain flushed"
     exit 0
   fi
@@ -141,25 +140,26 @@ main() {
   IFS=","
   for user in $unset_users; do
     info "Deleting rules related to IMDS access for user: $user"
-    iptables_delete "$PARALLELCLUSTER_CHAIN" "$IMDS_IP" "ACCEPT" "$user"
-    iptables_delete "$PARALLELCLUSTER_CHAIN" "$IMDS_IP" "REJECT" "$user"
+    iptables_delete $PARALLELCLUSTER_CHAIN $IMDS_IP "ACCEPT" $user
+    iptables_delete $PARALLELCLUSTER_CHAIN $IMDS_IP "REJECT" $user
   done
 
   # Add rule: ACCEPT user, for every allowed user
   for user in $allow_users; do
     info "Allowing IMDS access for user: $user"
-    iptables_add "$PARALLELCLUSTER_CHAIN" "$IMDS_IP" "ACCEPT" "$user"
+    iptables_add $PARALLELCLUSTER_CHAIN $IMDS_IP "ACCEPT" $user
   done
 
   # Add rule: REJECT user, for every denied user
   for user in $deny_users; do
     info "Denying IMDS access for user: $user"
-    iptables_add "$PARALLELCLUSTER_CHAIN" "$IMDS_IP" "REJECT" "$user"
+    iptables_add $PARALLELCLUSTER_CHAIN $IMDS_IP "REJECT" $user
   done
 
   # Add rule: REJECT not allowed users
   info "Denying IMDS access for not allowed users"
-  iptables_add "$PARALLELCLUSTER_CHAIN" "$IMDS_IP" "REJECT"
+  iptables_add $PARALLELCLUSTER_CHAIN $IMDS_IP "REJECT"
 }
 
 main "$@"
+
