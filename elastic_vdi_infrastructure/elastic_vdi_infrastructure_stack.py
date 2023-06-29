@@ -204,7 +204,8 @@ class ElasticVdiInfrastructureStack(Stack):
             target_type=elbv2.TargetType.INSTANCE,
             port=8443,
             vpc=vpc,
-            protocol=elbv2.ApplicationProtocol.HTTPS)
+            protocol=elbv2.ApplicationProtocol.HTTPS,
+            health_check={"path": "/health"})
 
         broker_tg_8445 = elbv2.ApplicationTargetGroup(
             self,
@@ -212,7 +213,8 @@ class ElasticVdiInfrastructureStack(Stack):
             target_type=elbv2.TargetType.INSTANCE,
             port=8445,
             vpc=vpc,
-            protocol=elbv2.ApplicationProtocol.HTTPS)
+            protocol=elbv2.ApplicationProtocol.HTTPS,
+            health_check={"path": "/health"})
 
         # Userdata of the instances
         data_broker = open("userdata/broker.sh", "rb").read()
