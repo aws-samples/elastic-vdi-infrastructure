@@ -22,7 +22,7 @@ class Aws:
         self.ec2 = boto3.client('ec2', region_name=region_name, config=config)
         self.ssm = boto3.client('ssm', region_name=region_name, config=config)
         self.autoscaling = boto3.client('autoscaling', region_name=region_name, config=config)
-        self.cloudwatch = client('cloudwatch', region_name=region_name, config=config)
+        self.cloudwatch = boto3.client('cloudwatch', region_name=region_name, config=config)
         self.tags = self.__describe_tags()
         self.logger = getLogger(__name__)
 
