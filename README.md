@@ -16,7 +16,7 @@ Install the CDK libraries enter the following:
 $ cd elastic-vdi-infrastructure
 $ python3 -m venv .venv
 $ source .venv/bin/activate
-$ pip3 install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 Open the app.py file in your editor of choice and replace the "CHANGE_ME" string.

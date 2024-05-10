@@ -7,7 +7,7 @@ from json import dumps
 from logging import getLogger
 from urllib.request import Request, urlopen
 
-from boto3 import client
+import boto3
 from botocore.config import Config
 
 
@@ -19,9 +19,9 @@ class Aws:
         self.token = self.__get_token()
         region_name = region or self.__get_metadata('meta-data/placement/region')
         config = Config(retries={'total_max_attempts': 10, 'mode': 'standard'})
-        self.ec2 = client('ec2', region_name=region_name, config=config)
-        self.ssm = client('ssm', region_name=region_name, config=config)
-        self.autoscaling = client('autoscaling', region_name=region_name, config=config)
+        self.ec2 = boto3.client('ec2', region_name=region_name, config=config)
+        self.ssm = boto3.client('ssm', region_name=region_name, config=config)
+        self.autoscaling = boto3.client('autoscaling', region_name=region_name, config=config)
         self.cloudwatch = client('cloudwatch', region_name=region_name, config=config)
         self.tags = self.__describe_tags()
         self.logger = getLogger(__name__)

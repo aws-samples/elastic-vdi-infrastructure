@@ -74,7 +74,7 @@ class DcvSM:
         endpoint = f'{self.server_url}/oauth2/token?grant_type=client_credentials'
         response = self.http.request('POST', endpoint, headers=headers)
         if response.status != 200:
-            self.logger.error('Cannot get access token: %s', response.text)
+            #self.logger.error('Cannot get access token: %s', response.text)
             return None
         access_token = loads(response.data.decode('utf-8'))['access_token']
         return access_token

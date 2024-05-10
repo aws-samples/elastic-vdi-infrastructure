@@ -384,9 +384,16 @@ class ElasticVdiInfrastructureStack(Stack):
     # Lambda used to create the certificate
     def create_lambda(self, lb_broker, config, role_lambda):
 
+        layer = _lambda.LayerVersion(self, "Openssl",
+            code=_lambda.Code.from_asset("./lambda-layer/layer.zip"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
+            description="Openssl"
+        )
+
         # Lambda to create the ALB https certificate
         lambda_cert = _lambda.Function(self, "lambda_create_cert",
-                                       runtime=_lambda.Runtime.PYTHON_3_7,
+                                       runtime=_lambda.Runtime.PYTHON_3_11,
+                                       layers=[layer],
                                        handler="cert.lambda_handler",
                                        code=_lambda.Code.from_asset(
                                            "./lambda"),
